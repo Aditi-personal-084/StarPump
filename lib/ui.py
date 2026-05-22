@@ -171,7 +171,7 @@ def apply_theme():
 
         /* ── Info cards (containers) ──────────────────────────── */
         .block-container {
-            padding-top: 2rem !important;
+            padding-top: 3.5rem !important;
         }
 
         /* ── Branded badge ────────────────────────────────────── */
