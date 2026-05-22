@@ -172,6 +172,7 @@ def add_bill_entry(
     payment_received: float,
     notes: str,
     created_by: str,
+    payment_mode: str = "",
 ) -> dict:
     """Add a bill entry inside a single transaction. Returns result dict."""
     conn = db.get_conn()
@@ -202,13 +203,13 @@ def add_bill_entry(
                 INSERT INTO bill_entries
                     (party_id, entry_date, vehicle_no, fuel_type, litres,
                      rate_per_litre, fuel_amount, cash_to_driver, total_bill,
-                     payment_received, balance, notes, created_by)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                     payment_received, balance, notes, created_by, payment_mode)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 RETURNING id
             """, (
                 party_id, entry_date, vehicle_no, fuel_type, litres,
                 rate_per_litre, fuel_amount, cash_to_driver, total_bill,
-                payment_received, new_balance, notes, created_by,
+                payment_received, new_balance, notes, created_by, payment_mode,
             ))
             entry_id = cur.fetchone()[0]
 
@@ -255,6 +256,7 @@ def get_party_ledger(
                     total_bill AS "Total Bill",
                     payment_received AS "Payment Received",
                     balance AS "Balance",
+                    payment_mode AS "Payment Mode",
                     notes AS "Notes"
                 FROM bill_entries
                 WHERE party_id = %s AND is_deleted = FALSE
@@ -283,6 +285,44 @@ def get_party_ledger(
                 except (ValueError, TypeError):
                     pass
             return df
+    finally:
+        db.put_conn(conn)
+
+
+def get_payment_mode_summary(
+    party_name: str,
+    date_from: Optional[date] = None,
+    date_to: Optional[date] = None,
+) -> dict[str, float]:
+    """Returns {mode: total_amount} for payments in the given date range."""
+    safe = sanitize_party_name(party_name)
+    conn = db.get_conn()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id FROM parties WHERE name = %s", (safe,))
+            row = cur.fetchone()
+            if not row:
+                return {}
+
+            query = """
+                SELECT payment_mode, SUM(payment_received)
+                FROM bill_entries
+                WHERE party_id = %s AND is_deleted = FALSE
+                  AND payment_received > 0 AND payment_mode != ''
+            """
+            params: list = [row[0]]
+
+            if date_from:
+                query += " AND entry_date >= %s"
+                params.append(date_from)
+            if date_to:
+                query += " AND entry_date <= %s"
+                params.append(date_to)
+
+            query += " GROUP BY payment_mode ORDER BY payment_mode"
+
+            cur.execute(query, params)
+            return {r[0]: float(r[1]) for r in cur.fetchall()}
     finally:
         db.put_conn(conn)
 

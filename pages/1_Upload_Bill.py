@@ -119,6 +119,15 @@ if "extracted_data" in st.session_state and st.session_state.extracted_data:
                                           key="ub_cash")
         payment_received = st.number_input("Payment Received (\u20b9)", value=0.0, format="%.2f",
                                             key="ub_payment")
+
+        # Payment mode dropdown — shown when payment > 0
+        PAYMENT_MODES = ["CASH", "BANK EDFS", "BANK ACCOUNT SBI", "PAYTM", "HDFC"]
+        ub_payment_mode = ""
+        if payment_received > 0:
+            ub_payment_mode = st.selectbox("Payment Mode", PAYMENT_MODES, key="ub_payment_mode")
+            if "payment_mode" in ub_errors:
+                st.error(ub_errors["payment_mode"])
+
         notes = st.text_input("Notes", value=data.get("notes") or "", key="ub_notes")
 
     # Balance preview
@@ -157,8 +166,10 @@ if "extracted_data" in st.session_state and st.session_state.extracted_data:
                 parse_date(date_str)
             except ValueError:
                 validation_errors["date"] = "Invalid date format. Use DD/MM/YYYY."
-        if fuel_amount <= 0 and cash_to_driver <= 0:
-            validation_errors["amount"] = "Fuel amount or cash to driver must be > 0."
+        if fuel_amount <= 0 and cash_to_driver <= 0 and payment_received <= 0:
+            validation_errors["amount"] = "Fuel amount, cash to driver, or payment received must be > 0."
+        if payment_received > 0 and not ub_payment_mode:
+            validation_errors["payment_mode"] = "Please select a payment mode."
 
         if validation_errors:
             st.session_state.upload_errors = validation_errors
@@ -178,6 +189,7 @@ if "extracted_data" in st.session_state and st.session_state.extracted_data:
                     payment_received=payment_received,
                     notes=sanitize_text(notes),
                     created_by=get_current_user(),
+                    payment_mode=ub_payment_mode,
                 )
                 st.success(
                     f"Entry #{result['serial_no']} saved for {result['party_name']}! "

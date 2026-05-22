@@ -80,11 +80,19 @@ with col2:
     if "amount" in errors:
         st.error(errors["amount"])
 
+    # Payment mode dropdown — shown when payment > 0
+    PAYMENT_MODES = ["CASH", "BANK EDFS", "BANK ACCOUNT SBI", "PAYTM", "HDFC"]
+    m_payment_mode = ""
+    if m_payment > 0:
+        m_payment_mode = st.selectbox("Payment Mode", PAYMENT_MODES, key="me_payment_mode")
+        if "payment_mode" in errors:
+            st.error(errors["payment_mode"])
+
 m_notes = st.text_input("Notes", key="me_notes")
 
 # Show total preview
 total_bill = m_fuel_amount + m_cash_driver
-if total_bill > 0:
+if total_bill > 0 or m_payment > 0:
     st.divider()
     st.markdown(f"""
     <div style="text-align: center; padding: 12px; background: #F0F7FF; border-radius: 10px; border: 1px solid #D0E2F4;">
@@ -135,8 +143,10 @@ if st.button("Save Entry", use_container_width=True, type="primary"):
             parse_date(m_date)
         except ValueError:
             validation_errors["date"] = "Invalid date format. Use DD/MM/YYYY."
-    if fuel_amount <= 0 and m_cash_driver <= 0:
-        validation_errors["amount"] = "Fuel amount or cash to driver must be > 0."
+    if fuel_amount <= 0 and m_cash_driver <= 0 and m_payment <= 0:
+        validation_errors["amount"] = "Fuel amount, cash to driver, or payment received must be > 0."
+    if m_payment > 0 and not m_payment_mode:
+        validation_errors["payment_mode"] = "Please select a payment mode."
 
     if validation_errors:
         st.session_state.manual_errors = validation_errors
@@ -156,6 +166,7 @@ if st.button("Save Entry", use_container_width=True, type="primary"):
                 payment_received=m_payment,
                 notes=sanitize_text(m_notes),
                 created_by=get_current_user(),
+                payment_mode=m_payment_mode,
             )
             st.session_state.last_save_result = result
             st.rerun()

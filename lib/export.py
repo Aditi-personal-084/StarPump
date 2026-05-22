@@ -13,10 +13,10 @@ from lib import models
 COLUMNS = [
     "S.No", "Date", "Vehicle No", "Fuel Type", "Litres", "Rate/Ltr",
     "Fuel Amount", "Cash to Driver", "Total Bill", "Payment Received",
-    "Balance", "Notes",
+    "Balance", "Payment Mode", "Notes",
 ]
 
-COL_WIDTHS = [6, 14, 16, 12, 12, 12, 16, 16, 14, 18, 14, 25]
+COL_WIDTHS = [6, 14, 16, 12, 12, 12, 16, 16, 14, 18, 14, 20, 25]
 
 HEADER_FILL = PatternFill(start_color="1F4E79", end_color="1F4E79", fill_type="solid")
 HEADER_FONT = Font(name="Calibri", bold=True, color="FFFFFF", size=11)

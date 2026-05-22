@@ -71,9 +71,33 @@ else:
             mcol2.metric("Total Fuel", f"\u20b9{total_fuel:,.2f}")
             mcol3.metric("Cash to Drivers", f"\u20b9{total_cash:,.2f}")
 
-            mcol4, mcol5, _ = st.columns(3)
+            total_payments = df["Payment Received"].sum() if "Payment Received" in df.columns else 0
+
+            mcol4, mcol5, mcol6 = st.columns(3)
             mcol4.metric("Total Billed", f"\u20b9{total_billed:,.2f}")
-            mcol5.metric("Current Balance", f"\u20b9{current_bal:,.2f}")
+            mcol5.metric("Total Payments", f"\u20b9{total_payments:,.2f}")
+            mcol6.metric("Current Balance", f"\u20b9{current_bal:,.2f}")
+
+            # Payment Mode Breakdown
+            mode_summary = models.get_payment_mode_summary(selected, date_from=date_from, date_to=date_to)
+            if mode_summary:
+                st.markdown("**Payment Mode Breakdown**")
+                mode_cols = st.columns(len(mode_summary))
+                for i, (mode, total) in enumerate(mode_summary.items()):
+                    mode_cols[i].metric(mode, f"\u20b9{total:,.2f}")
+
+            # Payment Reminder Message
+            if current_bal > 0:
+                with st.expander("Payment Reminder Message"):
+                    reminder = (
+                        f"Dear {selected},\n\n"
+                        f"This is a gentle reminder from Star Pump regarding your outstanding balance.\n\n"
+                        f"Outstanding Amount: Rs. {current_bal:,.2f}\n"
+                        f"As on: {today.strftime('%d/%m/%Y')}\n\n"
+                        f"Kindly arrange the payment at your earliest convenience.\n\n"
+                        f"Thank you,\nStar Pump"
+                    )
+                    st.code(reminder, language="text")
 
             st.markdown("")
             st.dataframe(
@@ -89,6 +113,7 @@ else:
                     "Payment Received": st.column_config.NumberColumn(format="\u20b9%.2f"),
                     "Balance": st.column_config.NumberColumn(format="\u20b9%.2f"),
                     "Rate/Ltr": st.column_config.NumberColumn(format="\u20b9%.2f"),
+                    "Payment Mode": st.column_config.TextColumn(width="medium"),
                 },
             )
 

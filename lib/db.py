@@ -64,12 +64,30 @@ def put_conn(conn):
     _get_pool().putconn(conn)
 
 
+MIGRATIONS = [
+    # Add payment_mode column (CASH, BANK EDFS, BANK ACCOUNT SBI, PAYTM, HDFC)
+    """
+    DO $$
+    BEGIN
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'bill_entries' AND column_name = 'payment_mode'
+        ) THEN
+            ALTER TABLE bill_entries ADD COLUMN payment_mode TEXT NOT NULL DEFAULT '';
+        END IF;
+    END $$;
+    """,
+]
+
+
 def _run_migrations():
     """Execute CREATE TABLE IF NOT EXISTS statements. Idempotent."""
     conn = get_conn()
     try:
         with conn.cursor() as cur:
             cur.execute(SCHEMA_SQL)
+            for migration in MIGRATIONS:
+                cur.execute(migration)
         conn.commit()
     finally:
         put_conn(conn)
