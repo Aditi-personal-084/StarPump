@@ -53,11 +53,33 @@ def _get_pool():
         minconn=1,
         maxconn=5,
         dsn=st.secrets["database"]["url"],
+        keepalives=1,
+        keepalives_idle=30,
+        keepalives_interval=10,
+        keepalives_count=5,
     )
 
 
 def get_conn():
-    return _get_pool().getconn()
+    """Get a connection from the pool, replacing it if stale (e.g. Neon suspend)."""
+    p = _get_pool()
+    conn = p.getconn()
+    try:
+        conn.isolation_level  # quick attribute check
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1")
+        # reset in case previous user left it in error state
+        conn.rollback()
+    except Exception:
+        # Connection is dead — close and create a fresh one
+        try:
+            conn.close()
+        except Exception:
+            pass
+        conn = psycopg2.connect(dsn=st.secrets["database"]["url"])
+        # Put the new conn back into the pool's tracking
+        p._pool.append(conn)  # noqa: SLF001
+    return conn
 
 
 def put_conn(conn):
